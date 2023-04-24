@@ -1,0 +1,4 @@
+﻿Marketplace,Asin,Title,Author,ContentType,DeliveryDeviceName,LoanCreationDate,LoanAcceptanceDate,LoanStatus,LoanProgram,EndDate,RecipientEmailId,CustomerCountryOfResidence,IsFirstContentLoan
+www.amazon.com,B004UJTG6Q,"The Adventures of Tom Sawyer (Tom Sawyer & Huckleberry Finn Series Book 1)","Mark Twain",EBOOK,"Matt's 7th Android Device",2017-05-31,N/A,LOAN EXPIRED,Prime Reading,2019-02-22,N/A,US,true
+www.amazon.com,B017I25DWC,"Nothing Short of Dying: A Clyde Barr Novel","Erik Storey",EBOOK,"Matt's 7th Android Device",2017-05-31,N/A,LOAN EXPIRED,Prime Reading,2019-02-22,N/A,US,true
+www.amazon.com,B00Y3KKHGA,"The Piccadilly Pickpocket: A Detective Lavender Short Story (Kindle Single)","Karen Charlton",EBOOK,"Matt's 7th Android Device",2017-05-31,N/A,LOAN EXPIRED,Prime Reading,2019-02-22,N/A,US,true
