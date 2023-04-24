@@ -1,3 +1,4 @@
 .env
 files/accounts.csv
 files/transactions.csv
+venv/
