@@ -2,3 +2,5 @@
 files/accounts.csv
 files/transactions.csv
 venv/
+chromedriver.exe
+LICENSE.chromedriver
