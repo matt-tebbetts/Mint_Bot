@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import json
 import re
+import ast
 
 # connections
 from mintapi import Mint
@@ -72,9 +73,9 @@ def clean_transactions(df):
         # replace True/False with "True"/"False"
         df.loc[:, col] = df.loc[:, col].apply(lambda x: str(x).replace("True", '"True"').replace("False", '"False"'))
 
-        # Modify the regex pattern to only replace single quotes that are not inside double quotes
-        df.loc[:, col] = df.loc[:, col].apply(lambda x: re.sub(r"(?<!['\"])(\')(?![\"'])", '"', x))
-        df.loc[:, col] = df.loc[:, col].apply(lambda x: (print(f"Error decoding: {x}") or json.loads(x)) if isinstance(x, str) else x)
+        # Use ast.literal_eval() to parse the strings containing Python literals
+        df.loc[:, col] = df.loc[:, col].apply(
+            lambda x: (print(f"Error decoding: {x}") or ast.literal_eval(x)) if isinstance(x, str) else x)
 
         # Create new columns from each key
         for key in df[col][0].keys():
