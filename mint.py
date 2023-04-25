@@ -69,6 +69,9 @@ def clean_transactions(df):
     # normalize json columns
     for col in cols_to_json:
 
+        # print first
+        df.loc[:, col] = df.loc[:, col].apply(lambda x: print(x) or json.loads(x))
+
         # make it a proper json
         df.loc[:, col] = df.loc[:, col].apply(lambda x: str(x).replace("True", '"True"').replace("False", '"False"'))
         df.loc[:, col] = df.loc[:, col].apply(lambda x: re.sub("'", '"', x))
