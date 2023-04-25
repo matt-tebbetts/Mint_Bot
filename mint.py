@@ -72,7 +72,7 @@ def clean_transactions(df):
         # make it a proper json
         df.loc[:, col] = df.loc[:, col].apply(lambda x: str(x).replace("True", '"True"').replace("False", '"False"'))
         df.loc[:, col] = df.loc[:, col].apply(lambda x: re.sub("'", '"', x))
-        df.loc[:, col] = df.loc[:, col].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+        df.loc[:, col] = df.loc[:, col].apply(lambda x: (print(f"Error decoding: {x}") or json.loads(x)) if isinstance(x, str) else x)
 
         # Create new columns from each key
         for key in df[col][0].keys():
