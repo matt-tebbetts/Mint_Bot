@@ -69,9 +69,12 @@ def clean_transactions(df):
     # normalize json columns
     for col in cols_to_json:
 
-        # make it a proper json
+        # clean it up to make proper json
         df.loc[:, col] = df.loc[:, col].apply(lambda x: str(x).replace("True", '"True"').replace("False", '"False"'))
         df.loc[:, col] = df.loc[:, col].apply(lambda x: re.sub("'", '"', x))
+
+        # escape unescaped double quotes within string values (like Dick's Sporting Goods)
+        df.loc[:, col] = df.loc[:, col].apply(lambda x: re.sub(r'(?<!\\)"', r'\"', x) if isinstance(x, str) else x)
         df.loc[:, col] = df.loc[:, col].apply(lambda x: (print(f"Error decoding: {x}") or json.loads(x)) if isinstance(x, str) else x)
 
         # Create new columns from each key
