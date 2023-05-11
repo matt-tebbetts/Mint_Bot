@@ -3,3 +3,5 @@ files/
 venv/
 test.py
 *chromedriver*
+*.pyc
+__pycache__/
