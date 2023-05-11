@@ -47,10 +47,9 @@ def get_transactions(mint, now):
     trans_json = json_normalize(trans_raw)
     df = pd.DataFrame(trans_json)
 
-    # remove weird columns
-    if 'metaData_link' in df.columns:
-        df = df.drop('metaData_link', axis=1)
-    
+    columns_to_drop = df.columns[df.columns.str.contains('meta')]
+    df = df.drop(columns_to_drop, axis=1)
+
     df['insert_ts'] = now
     df.columns = df.columns.str.replace('[.\s]', '_', regex=True)
 
