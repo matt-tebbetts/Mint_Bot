@@ -1,7 +1,5 @@
 .env
-test.py
-files/accounts.csv
-files/transactions.csv
+files/
 venv/
-chromedriver.exe
-LICENSE.chromedriver
+test.py
+*chromedriver*
