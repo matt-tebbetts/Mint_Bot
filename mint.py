@@ -92,15 +92,20 @@ accnt_df.to_csv(f'files/accnt_df_{now_str}.csv', index=False)
 
 # send to sql
 engine = create_engine(sql_addr)
-try:    
-    trans_df.to_sql('transactions_history', con=engine, if_exists='append', index=False)
+try:
+    # get columns from table
+    trans_columns = pd.read_sql_query("SELECT * FROM transactions_history LIMIT 0", engine).columns
+    trans_filtered = trans_df[trans_columns]
+    trans_filtered.to_sql('transactions_history', con=engine, if_exists='append', index=False)
     print(f"Success sending transactions to sql")
 except Exception as e:
     print(f"Error when trying to send transactions to sql: {e}")
 
 # send accounts to sql
 try:    
-    accnt_df.to_sql('accounts_history', con=engine, if_exists='append', index=False)
+    accnt_columns = pd.read_sql_query("SELECT * FROM accounts_history LIMIT 0", engine).columns
+    accnt_filtered = accnt_df[accnt_columns]
+    accnt_filtered.to_sql('accounts_history', con=engine, if_exists='append', index=False)
     print(f"Success sending accounts to sql")
 except Exception as e:
     print(f"Error when trying to send accounts to sql: {e}")
