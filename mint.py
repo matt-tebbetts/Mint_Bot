@@ -23,6 +23,7 @@ MINT_TOKEN = os.getenv('MINT_TOKEN')
 now = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
 now_str = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y%m%d_%H%M%S')
 
+
 # connect
 def connect_to_mint():
     mint = Mint(MINT_USER,
@@ -37,15 +38,34 @@ def connect_to_mint():
 # get transactions
 def get_transactions(mint, now):
     
+    # set columns
+    column_mapping = {
+            'id':                   'trans_id',
+            'date':                 'trans_date',
+            'amount':               'trans_amount',
+            'transactionType':      'trans_type',
+            'description':          'trans_desc',
+            'category_name':        'category_name',
+            'category_parentName':  'category_parent_name',
+            'accountRef_name':      'account_name',
+            'tagData_name':         'trans_tag',
+            'notes':                'trans_notes',
+            'isReviewed':           'is_reviewed',
+            'lastUpdatedDate':      'last_updated',
+            'parentId':             'trans_parent_id',
+            'fiData_amount':        'orig_amount',
+            'fiData_date':          'orig_date',
+            'fiData_description':   'orig_desc',
+            'accountRef_id':        'account_id',
+            'accountRef_type':      'account_type',
+            'category_id':          'category_id',
+            'category_parentId':    'category_parent_id',
+            'insert_ts':            'insert_ts'
+        }
+    cols_to_keep = list(column_mapping.keys())
+
     # get the raw data
     trans_raw = mint.get_transaction_data()
-
-    # pick specific columns and keep in this order
-    cols_to_keep = ['id', 'date', 'amount', 'transactionType', 'description'
-        'category_name', 'category_parentName', 'accountRef_name', 'tagData_name'
-        'notes', 'isReviewed', 'lastUpdatedDate', 'parentId'
-        'fiData_amount', 'fiData_date', 'fiData_description'
-        'accountRef_id', 'accountRef_type', 'category_id', 'category_parentId', 'insert_ts']
 
     # removes inner level "tags" from "tagData" column
     for transaction in trans_raw:
@@ -58,10 +78,17 @@ def get_transactions(mint, now):
     trans_json = json_normalize(trans_raw)
     df = pd.DataFrame(trans_json)
 
-    # confirm columns
+    # select certain columns
     df.columns = df.columns.str.replace('[.\s]', '_', regex=True)
     df['insert_ts'] = now
     df = df[cols_to_keep]
+    df = df.rename(columns=column_mapping)
+
+    # clean up some columns
+    df['trans_id'] = df['trans_id'].str.split('_').str.get(1).str.split('_').str.get(0)
+    df['category_id'] = df['category_id'].str.split('_').str.get(0)
+    df['category_parent_id'] = df['category_parent_id'].str.split('_').str.get(0)
+    df['last_updated'] = pd.to_datetime(df['last_updated']).dt.strftime('%Y-%m-%d %H:%M:%S')
 
     return df
 
@@ -100,6 +127,7 @@ try:
 except Exception as e:
     print(f"Error when trying to send transactions to sql: {e}")
 
+"""
 # get accounts
 accnt_df = get_accounts(mint, now)
 accnt_df.to_csv(f'files/accnt_df_{now_str}.csv', index=False)
@@ -110,6 +138,7 @@ try:
     print(f"Success sending accounts to sql")
 except Exception as e:
     print(f"Error when trying to send accounts to sql: {e}")
+"""
 
 # close connection
 mint.close()
