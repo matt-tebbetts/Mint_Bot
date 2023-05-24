@@ -23,7 +23,6 @@ MINT_TOKEN = os.getenv('MINT_TOKEN')
 now = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
 now_str = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y%m%d_%H%M%S')
 
-
 # connect
 def connect_to_mint():
     mint = Mint(MINT_USER,
@@ -95,21 +94,30 @@ def get_transactions(mint, now):
 # get accounts
 def get_accounts(mint, now):
 
+    # set columns
+    column_mapping = {
+            'id'	                :'account_id',
+            'value'	                :'account_balance',
+            'name'	                :'account_name',
+            'type'	                :'account_type',
+            'isActive'              :'is_active',
+            'isError'	            :'has_error',
+            'insert_ts'	            :'insert_ts'
+        }
+    cols_to_keep = list(column_mapping.keys())
+
     # get the raw data
     accnt_raw = mint.get_account_data()
 
     # send to dataframe
     df = pd.DataFrame(accnt_raw)
-
-    # clean up columns
-    df['id'] = df['id'].str.split('_').str[1]
-    df['type'] = df.apply(lambda row: row['bankAccountType'] if pd.notnull(row['bankAccountType']) else ('CREDIT' if row['type'] == 'CreditAccount' else row['type']), axis=1)
-    df = df.rename(columns={'id': 'account_id', 
-                            'name': 'account_name', 
-                            'currentBalance': 'account_balance',
-                            'type': 'account_type'})
+    df = df[df['isActive'] == 1]
     df['insert_ts'] = now
-    df.columns = df.columns.str.replace('[.\s]', '_', regex=True)
+
+    # keep only some columns, then rename them
+    df = df[cols_to_keep]
+    df = df.rename(columns=column_mapping)
+    df['account_id'] = df['account_id'].str.split('_').str[1]
 
     return df
 
@@ -127,18 +135,15 @@ try:
 except Exception as e:
     print(f"Error when trying to send transactions to sql: {e}")
 
-"""
 # get accounts
 accnt_df = get_accounts(mint, now)
 accnt_df.to_csv(f'files/accnt_df_{now_str}.csv', index=False)
+
 try:    
-    accnt_columns = pd.read_sql_query("SELECT * FROM accounts_history LIMIT 0", engine).columns
-    accnt_filtered = accnt_df[accnt_columns]
-    accnt_filtered.to_sql('accounts_history', con=engine, if_exists='append', index=False)
+    accnt_df.to_sql('accounts_history', con=engine, if_exists='append', index=False)
     print(f"Success sending accounts to sql")
 except Exception as e:
     print(f"Error when trying to send accounts to sql: {e}")
-"""
 
 # close connection
 mint.close()
