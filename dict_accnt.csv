@@ -1,0 +1,8 @@
+key,value
+id,account_id
+value,account_balance
+name,account_name
+type,account_type
+isActive,is_active
+isError,has_error
+insert_ts,insert_ts

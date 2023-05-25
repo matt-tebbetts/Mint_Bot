@@ -10,6 +10,7 @@ import pandas as pd
 from pandas import json_normalize
 from datetime import datetime
 import numpy as np
+import csv
 import json
 import time
 import pytz
@@ -39,29 +40,13 @@ def connect_to_mint():
 def get_transactions(mint, now):
     
     # set columns
-    column_mapping = {
-            'id':                   'trans_id',
-            'date':                 'trans_date',
-            'amount':               'trans_amount',
-            'transactionType':      'trans_type',
-            'description':          'trans_desc',
-            'category_name':        'category_name',
-            'category_parentName':  'category_parent_name',
-            'accountRef_name':      'account_name',
-            'tagData_name':         'trans_tag',
-            'notes':                'trans_notes',
-            'isReviewed':           'is_reviewed',
-            'lastUpdatedDate':      'last_updated',
-            'parentId':             'trans_parent_id',
-            'fiData_amount':        'orig_amount',
-            'fiData_date':          'orig_date',
-            'fiData_description':   'orig_desc',
-            'accountRef_id':        'account_id',
-            'accountRef_type':      'account_type',
-            'category_id':          'category_id',
-            'category_parentId':    'category_parent_id',
-            'insert_ts':            'insert_ts'
-        }
+    column_mapping = {}
+    with open('dict_trans.csv', 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Skip header row
+        for row in reader:
+            key, value = row
+            column_mapping[key] = value
     cols_to_keep = list(column_mapping.keys())
 
     # get the raw data
@@ -99,15 +84,13 @@ def get_transactions(mint, now):
 def get_accounts(mint, now):
 
     # set columns
-    column_mapping = {
-            'id'	                :'account_id',
-            'value'	                :'account_balance',
-            'name'	                :'account_name',
-            'type'	                :'account_type',
-            'isActive'              :'is_active',
-            'isError'	            :'has_error',
-            'insert_ts'	            :'insert_ts'
-        }
+    column_mapping = {}
+    with open('dict_accnt.csv', 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Skip header row
+        for row in reader:
+            key, value = row
+            column_mapping[key] = value
     cols_to_keep = list(column_mapping.keys())
 
     # get the raw data
