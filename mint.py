@@ -9,6 +9,7 @@ import os
 import pandas as pd
 from pandas import json_normalize
 from datetime import datetime
+import numpy as np
 import json
 import time
 import pytz
@@ -77,6 +78,9 @@ def get_transactions(mint, now):
     trans_json = json_normalize(trans_raw)
     df = pd.DataFrame(trans_json)
 
+    # print df.columns
+    print(f"default columns are: {df.columns}")
+
     # select certain columns
     df.columns = df.columns.str.replace('[.\s]', '_', regex=True)
     df['insert_ts'] = now
@@ -111,8 +115,15 @@ def get_accounts(mint, now):
 
     # send to dataframe
     df = pd.DataFrame(accnt_raw)
+
+    # print df.columns
+    print(f"default columns are: {df.columns}")
+
     df = df[df['isActive'] == 1]
     df['insert_ts'] = now
+    
+    # if bankAccountType is not null, overwrite the "type" column
+    df['type'] = np.where(df['bankAccountType'].notnull(), df['bankAccountType'], df['type'])
 
     # keep only some columns, then rename them
     df = df[cols_to_keep]
@@ -125,17 +136,16 @@ def get_accounts(mint, now):
 mint = connect_to_mint()
 engine = create_engine(sql_addr)
 
-# get transactions
+# transactions
 trans_df = get_transactions(mint, now)
 trans_df.to_csv(f'files/trans_df_{now_str}.csv', index=False)
 try:
-    # get columns from table
     trans_df.to_sql('transactions_history', con=engine, if_exists='append', index=False)
     print(f"Success sending transactions to sql")
 except Exception as e:
     print(f"Error when trying to send transactions to sql: {e}")
 
-# get accounts
+# accounts
 accnt_df = get_accounts(mint, now)
 accnt_df.to_csv(f'files/accnt_df_{now_str}.csv', index=False)
 
