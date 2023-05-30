@@ -1,6 +1,6 @@
 # connections
 from mintapi import Mint
-from mintapi import DateFilter
+from mintapi.filters import DateFilter
 from sqlalchemy import create_engine
 from sqlalchemy import text
 from dotenv import load_dotenv
