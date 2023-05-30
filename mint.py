@@ -2,6 +2,7 @@
 from mintapi import Mint
 from mintapi import DateFilter
 from sqlalchemy import create_engine
+from sqlalchemy import text
 from dotenv import load_dotenv
 from config import sql_addr
 import os
@@ -26,9 +27,11 @@ MINT_TOKEN = os.getenv('MINT_TOKEN')
 now = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
 now_str = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y%m%d_%H%M%S')
 
-# get columns from sql
 def get_sql_cols(engine, table_name):
-    cols_to_keep = engine.execute(f"SELECT * FROM {table_name} LIMIT 0").keys()
+    with engine.connect() as connection:
+        statement = text(f"SELECT * FROM {table_name} LIMIT 0")
+        result = connection.execute(statement)
+        cols_to_keep = result.keys()
     return cols_to_keep
 
 # set renaming dictionary
@@ -56,8 +59,6 @@ def get_transactions(mint, engine, now):
     
     # set up dataframe to match format of sql table
     table_name = 'transactions_history'
-    cols_to_keep = get_sql_cols(engine, table_name)
-    df = pd.DataFrame(columns=cols_to_keep)
 
     # set time range and get the data from mint
     time_range = DateFilter.Options.LAST_3_MONTHS
@@ -75,9 +76,15 @@ def get_transactions(mint, engine, now):
     cols_to_rename = find_renaming_dict(engine, table_name)
     trans_df = trans_df.rename(columns=cols_to_rename)
 
-    # get data from trans_json_renamed and append to df
-    df = pd.concat([df, trans_df], ignore_index=True, join='left')
+    # create dataframe with only the columns that are in the sql table
+    cols_to_keep = get_sql_cols(engine, table_name)
+    df = pd.DataFrame(columns=cols_to_keep)
+
+    # insert records
+    df = trans_df.reindex(columns=cols_to_keep)
     df = df.replace({np.nan: None})
+
+    print(f"columns are: {df.columns}")
 
     # clean up some columns
     df['insert_ts'] = now
