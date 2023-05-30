@@ -1,5 +1,6 @@
 # connections
 from mintapi import Mint
+from mintapi import DateFilter
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 from config import sql_addr
@@ -25,6 +26,20 @@ MINT_TOKEN = os.getenv('MINT_TOKEN')
 now = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
 now_str = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y%m%d_%H%M%S')
 
+# get columns from sql
+def get_sql_cols(engine, table_name):
+    cols_to_keep = engine.execute(f"SELECT * FROM {table_name} LIMIT 0").keys()
+    return cols_to_keep
+
+# set renaming dictionary
+def find_renaming_dict(engine, table_name):
+    with open('dict_trans.csv', 'r') as csvfile:
+        cols_to_rename = dict(line.strip().split(',') for line in csvfile.readlines()[1:])
+    return cols_to_rename
+
+def rename_keys(mapping, rename_dict):
+    return {rename_dict.get(key, key): value for key, value in mapping.items()}
+
 # connect
 def connect_to_mint():
     mint = Mint(MINT_USER,
@@ -37,51 +52,46 @@ def connect_to_mint():
     return mint
 
 # get transactions
-def get_transactions(mint, now):
+def get_transactions(mint, engine, now):
     
-    # set columns
-    column_mapping = {}
-    with open('dict_trans.csv', 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader)  # Skip header row
-        for row in reader:
-            key, value = row
-            column_mapping[key] = value
-    cols_to_keep = list(column_mapping.keys())
+    # set up dataframe to match format of sql table
+    table_name = 'transactions_history'
+    cols_to_keep = get_sql_cols(engine, table_name)
+    df = pd.DataFrame(columns=cols_to_keep)
 
-    # get the raw data
-    trans_raw = mint.get_transaction_data()
+    # set time range and get the data from mint
+    time_range = DateFilter.Options.LAST_3_MONTHS
+    trans_raw = mint.get_transaction_data(time_range)
 
-    # removes inner level "tags" from "tagData" column
+    # removes inner level of one json column
     for transaction in trans_raw:
         if 'tagData' in transaction:
             tag_data = transaction['tagData']
             if tag_data and 'tags' in tag_data:
                 transaction['tagData'] = tag_data['tags'][0] if tag_data['tags'] else {}
+    
+    # normalize json and create dataframe
+    trans_df = json_normalize(trans_raw)
+    cols_to_rename = find_renaming_dict(engine, table_name)
+    trans_df = trans_df.rename(columns=cols_to_rename)
 
-    # normalize json and send to dataframe
-    trans_json = json_normalize(trans_raw)
-    df = pd.DataFrame(trans_json)
-
-    # print df.columns
-    print(f"default columns are: {df.columns}")
-
-    # select certain columns
-    df.columns = df.columns.str.replace('[.\s]', '_', regex=True)
-    df['insert_ts'] = now
-    df = df[cols_to_keep]
-    df = df.rename(columns=column_mapping)
+    # get data from trans_json_renamed and append to df
+    df = pd.concat([df, trans_df], ignore_index=True, join='left')
+    df = df.replace({np.nan: None})
 
     # clean up some columns
-    df['trans_id'] = df['trans_id'].str.split('_').str.get(1).str.split('_').str.get(0)
-    df['category_id'] = df['category_id'].str.split('_').str.get(0)
-    df['category_parent_id'] = df['category_parent_id'].str.split('_').str.get(0)
+    df['insert_ts'] = now
     df['last_updated'] = pd.to_datetime(df['last_updated']).dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    # clean up the ids
+    df['trans_id'] = df['trans_id'].apply(lambda x: x.split('_', 1)[-1])
+    for col in ['trans_id', 'category_id', 'category_parent_id']:
+        df[col] = df[col].str.split('_').str[0]
 
     return df
 
 # get accounts
-def get_accounts(mint, now):
+def get_accounts(mint, engine, now):
 
     # set columns
     column_mapping = {}
@@ -120,7 +130,7 @@ mint = connect_to_mint()
 engine = create_engine(sql_addr)
 
 # transactions
-trans_df = get_transactions(mint, now)
+trans_df = get_transactions(mint, engine, now)
 trans_df.to_csv(f'files/trans_df_{now_str}.csv', index=False)
 try:
     trans_df.to_sql('transactions_history', con=engine, if_exists='append', index=False)
@@ -129,7 +139,7 @@ except Exception as e:
     print(f"Error when trying to send transactions to sql: {e}")
 
 # accounts
-accnt_df = get_accounts(mint, now)
+accnt_df = get_accounts(mint, engine, now)
 accnt_df.to_csv(f'files/accnt_df_{now_str}.csv', index=False)
 
 try:    
