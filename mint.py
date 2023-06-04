@@ -17,9 +17,6 @@ import csv
 
 # environment
 load_dotenv()
-#MINT_USER = os.getenv('MINT_USER')
-#MINT_PASS = os.getenv('MINT_PASS')
-#MINT_TOKEN = os.getenv('MINT_TOKEN')
 
 # get time
 now = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
