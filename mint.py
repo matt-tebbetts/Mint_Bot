@@ -4,24 +4,22 @@ from mintapi.filters import DateFilter
 from sqlalchemy import create_engine
 from sqlalchemy import text
 from dotenv import load_dotenv
-from config import sql_addr
+from config import sql_addr, mint_user, mint_pass, mint_token
 import os
 
 # data manipulation
 import pandas as pd
 from pandas import json_normalize
 from datetime import datetime
+import pytz
 import numpy as np
 import csv
-import json
-import time
-import pytz
 
 # environment
 load_dotenv()
-MINT_USER = os.getenv('MINT_USER')
-MINT_PASS = os.getenv('MINT_PASS')
-MINT_TOKEN = os.getenv('MINT_TOKEN')
+#MINT_USER = os.getenv('MINT_USER')
+#MINT_PASS = os.getenv('MINT_PASS')
+#MINT_TOKEN = os.getenv('MINT_TOKEN')
 
 # get time
 now = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S')
@@ -45,10 +43,10 @@ def rename_keys(mapping, rename_dict):
 
 # connect
 def connect_to_mint():
-    mint = Mint(MINT_USER,
-                MINT_PASS,
+    mint = Mint(mint_user,
+                mint_pass,
                 mfa_method='soft-token',
-                mfa_token=MINT_TOKEN,
+                mfa_token=mint_token,
                 headless=True,
                 wait_for_sync=True
                 )
@@ -84,8 +82,6 @@ def get_transactions(mint, engine, now):
     df = trans_df.reindex(columns=cols_to_keep)
     df = df.replace({np.nan: None})
 
-    print(f"columns are: {df.columns}")
-
     # clean up some columns
     df['insert_ts'] = now
     df['last_updated'] = pd.to_datetime(df['last_updated']).dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -115,9 +111,6 @@ def get_accounts(mint, engine, now):
 
     # send to dataframe
     df = pd.DataFrame(accnt_raw)
-
-    # print df.columns
-    print(f"default columns are: {df.columns}")
 
     df = df[df['isActive'] == 1]
     df['insert_ts'] = now

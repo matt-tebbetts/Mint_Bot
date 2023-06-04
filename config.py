@@ -21,4 +21,8 @@ credentials = {
     'SQL_DATA': get_env_variable('SQLDATA'),
 }
 
+# set variables
 sql_addr = f"mysql+pymysql://{credentials['SQL_USER']}:{credentials['SQL_PASS']}@{credentials['SQL_HOST']}:{credentials['SQL_PORT']}/{credentials['SQL_DATA']}"
+mint_user = credentials['MINT_USER']
+mint_pass = credentials['MINT_PASS']
+mint_token = credentials['MINT_TOKEN']
