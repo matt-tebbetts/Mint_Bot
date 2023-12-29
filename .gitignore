@@ -5,3 +5,4 @@ test.py
 *chromedriver*
 *.pyc
 __pycache__/
+.venv
