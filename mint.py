@@ -109,7 +109,7 @@ def get_accounts(mint, engine, now):
     # send to dataframe
     df = pd.DataFrame(accnt_raw)
 
-    df = df[df['isActive'] == 1]
+    # add insert timestamp
     df['insert_ts'] = now
     
     # if bankAccountType is not null, overwrite the "type" column
