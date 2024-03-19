@@ -1,8 +1,5 @@
-.env
+!.gitignore
+.*
+_*
 files/
-venv/
 test.py
-*chromedriver*
-*.pyc
-__pycache__/
-.venv
