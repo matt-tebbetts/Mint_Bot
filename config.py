@@ -11,18 +11,14 @@ def get_env_variable(var_name):
     return value
 
 credentials = {
-    'MINT_USER': get_env_variable('MINT_USER'),
-    'MINT_PASS': get_env_variable('MINT_PASS'),
-    'MINT_TOKEN': get_env_variable('MINT_TOKEN'),
     'SQL_USER': get_env_variable('SQLUSER'),
     'SQL_PASS': get_env_variable('SQLPASS'),
     'SQL_HOST': get_env_variable('SQLHOST'),
     'SQL_PORT': get_env_variable('SQLPORT'),
-    'SQL_DATA': get_env_variable('SQLDATA'),
+    'SQL_DATA': get_env_variable('SQLDATA'),   
 }
 
 # set variables
 sql_addr = f"mysql+pymysql://{credentials['SQL_USER']}:{credentials['SQL_PASS']}@{credentials['SQL_HOST']}:{credentials['SQL_PORT']}/{credentials['SQL_DATA']}"
-mint_user = credentials['MINT_USER']
-mint_pass = credentials['MINT_PASS']
-mint_token = credentials['MINT_TOKEN']
+
+token = os.getenv("LUNCHMONEY_TOKEN")
