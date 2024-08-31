@@ -1,83 +1,95 @@
 import os
 from dotenv import load_dotenv
-from lunchmoney import LunchMoney
+from lunchable import LunchMoney
 from datetime import date
 import pandas as pd
+import json
 from config import sql_addr
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.exc import NoSuchTableError
+import config
+import sqlalchemy
 
 # get current date using datetime module
 today = date.today().strftime("%Y-%m-%d")
 
-# Create a SQL Alchemy engine
-engine = create_engine("sql_addr")
+class DateEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, date):
+            return obj.isoformat()
+        return super().default(obj)
 
-def get_table_schema(table_name: str) -> pd.DataFrame:
-    """Fetch the schema of a table from the database."""
-    try:
-        inspector = inspect(engine)
-        columns = inspector.get_columns(table_name)
-        return pd.DataFrame.from_records(columns)
-    except NoSuchTableError:
-        return pd.DataFrame()
-
-def df_to_sql(df: pd.DataFrame, table_name: str):
-    """Insert data from a DataFrame into a SQL table, handling schema discrepancies."""
-    # Get the current schema of the table
-    schema_df = get_table_schema(table_name)
-    
-    if schema_df.empty:
-        # If the table does not exist, create it
-        df.to_sql(table_name, engine, index=False, if_exists='fail')
-    else:
-        # If the table exists, check for schema discrepancies
-        common_cols = set(df.columns).intersection(set(schema_df['name']))
-        if len(common_cols) < len(df.columns):
-            print(f"Warning: DataFrame contains columns not in table {table_name}. Only common columns will be inserted.")
-        
-        # Insert data from the DataFrame into the table, only for common columns
-        df[list(common_cols)].to_sql(table_name, engine, index=False, if_exists='append')
-
-# Call the function with your DataFrame and table name
-df_to_sql(df, 'your_table_name')
-
-def get_transactions(token, start_date='2020-01-01'):
-
-    # connect
-    lunch = LunchMoney(access_token=token)
-    raw = lunch.get_transactions(start_date=start_date, end_date=today)
-    transaction_as_dict_list = [t.model_dump() for t in raw]
-    df = pd.DataFrame(transaction_as_dict_list)
-
-    # Check if 'plaid_metadata' column exists and needs to be flattened
-    if 'plaid_metadata' in df.columns:
-        # Assume 'plaid_metadata' is already a dict or similar structure that can be directly normalized
-        # Directly normalize 'plaid_metadata' without using json.loads
-        plaid_metadata_df = pd.json_normalize(df['plaid_metadata'])
+def flatten_column(df, column_name):
+    if column_name in df.columns:
+        # Assume column_name is already a dict or similar structure that can be directly normalized
+        # Directly normalize column_name without using json.loads
+        column_df = pd.json_normalize(df[column_name])
         
         # Rename columns to prevent potential name clashes
-        plaid_metadata_df.columns = ['plaid_' + col for col in plaid_metadata_df.columns]
+        column_df.columns = [column_name + '_' + str(col) for col in column_df.columns]
         
-        # Drop the original 'plaid_metadata' column from df
-        df.drop(columns=['plaid_metadata'], inplace=True)
+        # Drop the original column_name column from df
+        df.drop(columns=[column_name], inplace=True)
         
-        # Concatenate the original DataFrame with the flattened 'plaid_metadata' DataFrame
-        df = pd.concat([df, plaid_metadata_df], axis=1)
-
+        # Concatenate the original DataFrame with the flattened column DataFrame
+        df = pd.concat([df, column_df], axis=1)
+    
     return df
 
+def get_transactions(token, start_date='2020-01-01'):
+    print("Fetching transactions...")
+    try:
+        # connect
+        lunch = LunchMoney(access_token=token)
+        raw = lunch.get_transactions(start_date=start_date, end_date=today)
+        transaction_as_dict_list = [t.model_dump() for t in raw]
+        print("Transactions fetched successfully.")
+        return transaction_as_dict_list
+    except Exception as e:
+        print(f"Error fetching transactions: {e}")
+        return []
+
+def save_as_json(data, json_file_path):
+    print("Saving data as JSON...")
+    try:
+        with open(json_file_path, 'w') as f:
+            json.dump(data, f, cls=DateEncoder)
+        print("Data saved to JSON successfully.")
+    except Exception as e:
+        print(f"Error saving data as JSON: {e}")
+
+def convert_to_dataframe(data):
+    print("Converting data to DataFrame...")
+    try:
+        df = pd.DataFrame(data)
+        print("Data converted to DataFrame successfully.")
+        return df
+    except Exception as e:
+        print(f"Error converting data to DataFrame: {e}")
+        return pd.DataFrame()
+
 def save_to_csv(df, csv_file_path):
-    df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+    print("Saving DataFrame to CSV...")
+    try:
+        df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+        print("DataFrame saved to CSV successfully.")
+    except Exception as e:
+        print(f"Error saving DataFrame to CSV: {e}")
 
 # setup
 load_dotenv()
 token = os.getenv("LUNCHMONEY_TOKEN")
-csv_file_path = 'files/transactions.csv'
+json_file_path = 'files/lunchmoney/transactions.json'
+csv_file_path = 'files/lunchmoney/transactions.csv'
 
-# get transactions
-df = get_transactions(token)
+# Task 1: Get the transactions and save as a JSON
+transactions = get_transactions(token)
+save_as_json(transactions, json_file_path)
 
-# save to csv
+# Task 2: Convert transactions to DataFrame and save as CSV
+df = convert_to_dataframe(transactions)
+df = flatten_column(df, 'plaid_metadata')
+df = flatten_column(df, 'tags')
 save_to_csv(df, csv_file_path)
 
+# Task 3: Send to SQL database using sql_addr from config.py
+engine = sqlalchemy.create_engine(config.sql_addr)
+df.to_sql('lm_transactions', engine, if_exists='replace', index=False)
